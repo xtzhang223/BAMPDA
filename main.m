@@ -1,389 +1,285 @@
-A=load('Protein_Disease_adj.txt');                                                       %×¢Òâ  RBM ´ú±í MDHGI, INMB ´ú±í BNNR
-nd=max(A(:,1));                                                           % 
-nv=max(A(:,2));                                                           % 
-[pp,qq]=size(A);                                                          % 
-% adaj_dm=zeros(nd,nv);
-% for i=1:pp
-%         adaj_dm(A(i,1),A(i,2))=1;                                           %adaj_dm: ÒÑÖªÁªÏµµÄÖÃ1
-% end
-interaction_matrix = xlsread('Protein_Disease_Associations.xlsx');
-[row,col]=size(interaction_matrix);
-number=100;                                                               %define the parameters
-C1_BRM=[];
-C1_INBM=[];
-C1_ensemble1=[];
-C1_ensemble2=[];
-C1_ensemble3=[];
-C1_ensemble4=[];
-C1_ensemble5=[];
-C1_ensemble6=[];
-C1_ensemble7=[];
-C1_ensemble8=[];
-C1_ensemble9=[];
-five_k_RBM=zeros(number,pp);
-five_k_INBM=zeros(number,pp);
-five_k_ensemble1=zeros(number,pp);
-five_k_ensemble2=zeros(number,pp);
-five_k_ensemble3=zeros(number,pp);
-five_k_ensemble4=zeros(number,pp);
-five_k_ensemble5=zeros(number,pp);
-five_k_ensemble6=zeros(number,pp);
-five_k_ensemble7=zeros(number,pp);
-five_k_ensemble8=zeros(number,pp);
-five_k_ensemble9=zeros(number,pp);
-% for n=1:9
-% C1_ensemble=zeros(9,pp);
-% end
-% for n=1:9
-% C2=zeros(9,pp);
-% end
+clear;
+clc;
 
-% BNNR Ä£ĞÍµÄÒ»Ğ©²ÎÊı
+%% è·¯å¾„è®¾ç½®
+result_dir = 'C:\Users\zxt\Desktop\run_MDHGIBNNR\demo';
+
+%% è¯»å–åŸºç¡€æ•°æ®
+A = load(fullfile(result_dir, 'Protein_Disease_adj.txt'));
+nd = max(A(:,1));
+nv = max(A(:,2));
+[pp, qq] = size(A);
+
+interaction_matrix = xlsread(fullfile(result_dir, 'Protein_Disease_Associations.xlsx'));
+[row, col] = size(interaction_matrix);
+
+number = 100;
+
+%% BNNR æ¨¡å‹å‚æ•°
 maxiter = 300;
 alpha = 1;
 beta = 10;
-tol1 = 2*1e-3;
-tol2 = 1*1e-5;
+tol1 = 2 * 1e-3;
+tol2 = 1 * 1e-5;
 
+array1 = xlsread(fullfile(result_dir, 'array_P-D.xlsx'));
 
-array1= xlsread('C:\Users\20379\Desktop\paint-roc\array_P-D.xlsx');
+%% è®¾ç½®æƒé‡ w = 0.1 åˆ° 0.9
+ensemble_weights = 0.1:0.1:0.9;
+
+mean_auc_all = zeros(length(ensemble_weights), 1);
+model_names = cell(length(ensemble_weights), 1);
+
 tic;
-for k=58:number
-    fprintf('µÚ%dÂÖ\n',k);
-    current_time = datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss');
-    disp(current_time);
-    array=array1(k,:);                                      %arrayÊÇ100*933µÄ¾ØÕó£¬Ã¿Ò»ĞĞÊÇ1-933µÄËæ»úĞòÁĞ
-    for circle=0:4
-                                                  %ÒòÎª933³ıÒÔ5³ı²»¾¡£¬ËùÒÔÇ°ËÄÕÛÊÇ187£¬×îºóÒ»ÕÛÎª185
-            nu=181;
-            interaction_matrix1=interaction_matrix;
-            interaction_matrix1_index=logical(zeros(row,col)~=0);    %interaction_matrix1_indexÎªÑµÁ·Ñù±¾¶ÔÓ¦Î»ÖÃµÄ¾ØÕó
-            for i=1:pp
-                interaction_matrix1_index(A(i,1),A(i,2))=1;
-            end
-            new_array = array(1,1+circle*181:(circle+1)*181);      % 933¸öÒ©Îï-²¡¶¾¹ØÁª¶Ô£¬Ç°ÃæËÄ¸önu=187£¬×îºóÒ»¸ön=185
-            
-            for j=1:181                                            %j=1:nu
-                o=A(new_array(1,j),1);
-                l=A(new_array(1,j),2);
-                interaction_matrix1(o,l)=0;                       % ÒÀ´ÎÖÃ½«1±äÎª0
-                interaction_matrix1_index(o,l)=0;
-            end
-            
-            protein_gauss = xlsread('Protein_Gaussian_Similarity_Matrix.xlsx');
-            disease_gauss = xlsread('Disease_Gaussian_Similarity_Matrix.xlsx');
-            [protein_integration_similarity,disease_integration_similarity] = integration_protein_disease_similarity(protein_gauss, disease_gauss ); %µ÷ÓÃº¯Êı»ñµÃÕûºÏÒ©Îï¸±×÷ÓÃ£¬Ò©Îï»¯Ñ§½á¹¹ÏàËÆĞÔ£¬¸ßË¹ÏàËÆĞÔµÄÒ©ÎïÏàËÆĞÔ¾ØÕó£¬²¡¶¾ÏàËÆĞÔÒ²ÊÇÈç´Ë
-            
-            %µ÷ÓÃÈıÖÖ·½·¨»ñÈ¡µÃ·Ö¾ØÕó
-%             [predict_score_matrix1,numhid]=RBM_model(interaction_matrix1);   %µ÷ÓÃRBM·½·¨£¬numhidÊÇnumber of hidden layers
-%             [predict_score_matrix_protein,threshold]=integrated_neighbor_model_protein( interaction_matrix1,protein_integration_similarity);   %ÕûºÏµÄÁìÓòµÄ·½·¨,ÓÃÒ©Îï-²¡¶¾ÏàËÆ¾ØÕóºÍÒ©ÎïÏàËÆ¾ØÕó
-%             [predict_score_matrix_disease,threshold]=integrated_neighbor_model_disease( interaction_matrix1,disease_integration_similarity);
-%             predict_score_matrix2=(predict_score_matrix_protein+predict_score_matrix_disease)/2;
-            
-            % MDHGIMDA Ô¤²âµÄ¹ØÁªµÃ·Ö
-            predict_score_matrix1 = MDHGIMDA(interaction_matrix1);
-            
-            %BNNR Ô¤²âµÄ¹ØÁªµÃ·Ö
-            Wdd = protein_integration_similarity;
-            Wvv= disease_integration_similarity;
-            Wvd = interaction_matrix1';
-            [dn,dr] = size(Wvd);
 
-            T = [Wdd, Wvd'; Wvd, Wvv];
-            [t1, t2] = size(T);
-            trIndex = double(T ~= 0);
-            [WW,iter] = BNNR(alpha, beta, T, trIndex, tol1, tol2, maxiter, 0, 1);
-            M_recovery = WW((t1-dn+1) : t1, 1 : dr);
-            predict_score_matrix2 = M_recovery';
-            
-            predict_score_matrix3_1=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.1);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_2=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.2);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_3=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.3);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_4=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.4);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_5=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.5);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_6=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.6);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_7=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.7);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_8=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.8);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_9=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.9);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            %     predict_score_matrix3=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            %
-            %µÚÒ»ÖÖ·½·¨
-            Sco1= predict_score_matrix1;
-            final_score=Sco1( interaction_matrix==0);
-            for i=1:181
-                q=A(new_array(1,i),1);
-                w=A(new_array(1,i),2);
-                s_score=Sco1(q,w);
-                T=[s_score;final_score];                                                %sort the score
-                index1=sort(T,'descend');
-                index1_1=find(index1==s_score);                                          %find the sort of changed variate
-                if length(index1_1)~=1
-                    index1_2=mean(index1_1);                                              %decide the number of the same value
-                else
-                    index1_2=index1_1;                                                    %get the average rank between same value
-                end
-                five_g1(i)=index1_2;
-            end
-            
-            %µÚ¶şÖÖ£ºINBM·½·¨
-            Sco2= predict_score_matrix2;
-            final_score=Sco2( interaction_matrix==0);
-            for i=1:181
-                q=A(new_array(1,i),1);
-                w=A(new_array(1,i),2);
-                s_score=Sco2(q,w);
-                T=[s_score;final_score];                                                %sort the score
-                index2=sort(T,'descend');
-                index2_1=find(index2==s_score);                                          %find the sort of changed variate
-                if length(index2_1)~=1
-                    index2_2=mean(index2_1);                                              %decide the number of the same value
-                else
-                    index2_2=index2_1;                                                    %get the average rank between same value
-                end
-                five_g2(i)=index2_2;
-            end
-            
-            %µÚÈıÖÖ·½·¨£ºensemble
-            
-            %        Sco3= predict_score_matrix3;
-            %        final_score=Sco3( interaction_matrix==0);
-            %        for i=1:187
-            %          q=A(new_array(1,i),1);
-            %          w=A(new_array(1,i),2);
-            %          s_score=Sco3(q,w);
-            %          T=[s_score;final_score];                                                %sort the score
-            %          index3=sort(T,'descend');
-            %          index3_1=find(index3==s_score);                                          %find the sort of changed variate
-            %          if length(index3_1)~=1
-            %            index3_2=mean(index3_1);                                              %decide the number of the same value
-            %          else
-            %            index3_2=index3_1;                                                    %get the average rank between same value
-            %         end
-            %         five_g3(i)=index3_2;
-            %        end
-            
-            five1 = conputing_ensemble_ranking( predict_score_matrix3_1,interaction_matrix,181,A,new_array); %conputing_ensemble_ranking ¼ÆËã¼¯³ÉËã·¨µÄÅÅÃû
-            five2 = conputing_ensemble_ranking( predict_score_matrix3_2,interaction_matrix,181,A,new_array);
-            five3 = conputing_ensemble_ranking( predict_score_matrix3_3,interaction_matrix,181,A,new_array);
-            five4 = conputing_ensemble_ranking( predict_score_matrix3_4,interaction_matrix,181,A,new_array);
-            five5 = conputing_ensemble_ranking( predict_score_matrix3_5,interaction_matrix,181,A,new_array);
-            five6 = conputing_ensemble_ranking( predict_score_matrix3_6,interaction_matrix,181,A,new_array);
-            five7 = conputing_ensemble_ranking( predict_score_matrix3_7,interaction_matrix,181,A,new_array);
-            five8 = conputing_ensemble_ranking( predict_score_matrix3_8,interaction_matrix,181,A,new_array);
-            five9 = conputing_ensemble_ranking( predict_score_matrix3_9,interaction_matrix,181,A,new_array);
-            
-            C1_BRM=[C1_BRM,five_g1];
-            C1_INBM=[C1_INBM,five_g2];
-            
-            C1_ensemble1=[C1_ensemble1,five1];
-            C1_ensemble2=[C1_ensemble2,five2];
-            C1_ensemble3=[C1_ensemble3,five3];
-            C1_ensemble4=[C1_ensemble4,five4];
-            C1_ensemble5=[C1_ensemble5,five5];
-            C1_ensemble6=[C1_ensemble6,five6];
-            C1_ensemble7=[C1_ensemble7,five7];
-            C1_ensemble8=[C1_ensemble8,five8];
-            C1_ensemble9=[C1_ensemble9,five9];
-            
-        end
-        
-        if circle==4
-            nu=181;
-            interaction_matrix1=interaction_matrix;
-            interaction_matrix1_index=logical(zeros(row,col)~=0);
-            for i=1:pp
-                interaction_matrix1_index(A(i,1),A(i,2))=1;
-            end
-            new_array = array(1,1+circle*181:pp);
-            for j=1:181
-                o=A(new_array(1,j),1);
-                l=A(new_array(1,j),2);
-                interaction_matrix1(o,l)=0;
-                interaction_matrix1_index(o,l)=0;
-            end
-            protein_gauss = similarity_protein(interaction_matrix1);
-            disease_gauss = similarity_microbe(interaction_matrix1);
-            [protein_integration_similarity,disease_integration_similarity] = integration_protein_disease_similarity(protein_gauss, disease_gauss ); %µ÷ÓÃº¯Êı»ñµÃÕûºÏÒ©Îï¸±×÷ÓÃ£¬Ò©Îï»¯Ñ§½á¹¹ÏàËÆĞÔ£¬¸ßË¹ÏàËÆĞÔµÄÒ©ÎïÏàËÆĞÔ¾ØÕó£¬²¡¶¾ÏàËÆĞÔÒ²ÊÇÈç´Ë
-            
-            %µ÷ÓÃÈıÖÖ·½·¨»ñÈ¡µÃ·Ö¾ØÕó
-%             [predict_score_matrix1,numhid]=RBM_model(interaction_matrix1);   %µ÷ÓÃRBM·½·¨£¬numhidÊÇnumber of hidden layers
-%             [predict_score_matrix_protein,threshold]=integrated_neighbor_model_protein( interaction_matrix1,protein_integration_similarity);   %ÕûºÏµÄÁìÓòµÄ·½·¨,ÓÃÒ©Îï-²¡¶¾ÏàËÆ¾ØÕóºÍÒ©ÎïÏàËÆ¾ØÕó
-%             [predict_score_matrix_disease,threshold]=integrated_neighbor_model_disease( interaction_matrix1,disease_integration_similarity);
-%             predict_score_matrix2=(predict_score_matrix_protein+predict_score_matrix_disease)/2;
-            
-            predict_score_matrix1 = MDHGIMDA(interaction_matrix1);
-            
-            %BNNR Ô¤²âµÄ¹ØÁªµÃ·Ö
-            Wdd = protein_integration_similarity;
-            Wvv= disease_integration_similarity;
-            Wvd = interaction_matrix1';
-            [dn,dr] = size(Wvd);
+%% å¯¹æ¯ä¸€ä¸ªæƒé‡åˆ†åˆ«è¿è¡Œ
+for weight_id = 1:length(ensemble_weights)
 
-            T = [Wdd, Wvd'; Wvd, Wvv];
-            [t1, t2] = size(T);
-            trIndex = double(T ~= 0);
-            [WW,iter] = BNNR(alpha, beta, T, trIndex, tol1, tol2, maxiter, 0, 1);
-            M_recovery = WW((t1-dn+1) : t1, 1 : dr);
-            predict_score_matrix2 = M_recovery';
-            
-            predict_score_matrix3_1=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.1);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_2=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.2);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_3=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.3);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_4=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.4);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_5=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.5);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_6=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.6);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_7=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.7);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_8=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.8);     %µ÷ÓÃ¼¯³ÉµÄ·½·¨
-            predict_score_matrix3_9=ensemble_average(predict_score_matrix1,predict_score_matrix2,interaction_matrix1_index,0.9);
-            
-            
-            
-            %µ÷ÓÃµÚÒ»ÖÖ·½·¨RBM
-            Sco1= predict_score_matrix1;
-            final_score=Sco1( interaction_matrix==0);
-            for i=1:181
-                q=A(new_array(1,i),1);
-                w=A(new_array(1,i),2);
-                s_score=Sco1(q,w);
-                T=[s_score;final_score];                                                %sort the score
-                index1=sort(T,'descend');
-                index1_1=find(index1==s_score);                                          %find the sort of changed variate
-                
-                if length(index1_1)~=1
-                    index1_2=mean(index1_1);                                              %decide the number of the same value
-                else
-                    index1_2=index1_1;                                                    %get the average rank between same value
+    ensemble_weight = ensemble_weights(weight_id);
+
+    weight_tag = sprintf('w%02d', round(ensemble_weight * 10));
+    model_name = ['ensemble_', weight_tag];
+    model_names{weight_id} = model_name;
+
+    fprintf('\n=====================================\n');
+    fprintf('å¼€å§‹è¿è¡Œ ensemble weight = %.1f\n', ensemble_weight);
+    fprintf('=====================================\n');
+
+    C1_ensemble3 = [];
+    five_k_ensemble3 = zeros(number, pp);
+
+    %% äº”æŠ˜äº¤å‰éªŒè¯
+    for k = 95:number
+
+        fprintf('ç¬¬%dè½®\n', k);
+        current_time = datetime('now', 'Format', 'yyyy-MM-dd HH:mm:ss');
+        disp(current_time);
+
+        array = array1(k,:);
+
+        for circle = 0:4
+
+            if circle < 4
+
+                nu = 181;
+                interaction_matrix1 = interaction_matrix;
+                interaction_matrix1_index = logical(zeros(row, col) ~= 0);
+
+                for i = 1:pp
+                    interaction_matrix1_index(A(i,1), A(i,2)) = 1;
                 end
-                five_g1_1(i)=index1_2;
-            end
-            
-            
-            %µÚ¶şÖÖ£ºINBM·½·¨
-            Sco2= predict_score_matrix2;
-            final_score=Sco2( interaction_matrix==0);
-            for i=1:181
-                q=A(new_array(1,i),1);
-                w=A(new_array(1,i),2);
-                s_score=Sco2(q,w);
-                T=[s_score;final_score];                                                %sort the score
-                index2=sort(T,'descend');
-                index2_1=find(index2==s_score);                                          %find the sort of changed variate
-                if length(index2_1)~=1
-                    index2_2=mean(index2_1);                                              %decide the number of the same value
-                else
-                    index2_2=index2_1;                                                    %get the average rank between same value
+
+                new_array = array(1, 1 + circle * 181 : (circle + 1) * 181);
+
+                for j = 1:181
+                    o = A(new_array(1,j), 1);
+                    l = A(new_array(1,j), 2);
+                    interaction_matrix1(o,l) = 0;
+                    interaction_matrix1_index(o,l) = 0;
                 end
-                five_g2_1(i)=index2_2;
+
+                protein_gauss = xlsread(fullfile(result_dir, 'Protein_Gaussian_Similarity_Matrix.xlsx'));
+                disease_gauss = xlsread(fullfile(result_dir, 'Disease_Gaussian_Similarity_Matrix.xlsx'));
+
+                [protein_integration_similarity, disease_integration_similarity] = ...
+                    integration_protein_disease_similarity(protein_gauss, disease_gauss);
+
+                %% MDHGIMDA é¢„æµ‹å¾—åˆ†
+                predict_score_matrix1 = MDHGIMDA(interaction_matrix1);
+
+                %% BNNR é¢„æµ‹å¾—åˆ†
+                Wdd = protein_integration_similarity;
+                Wvv = disease_integration_similarity;
+                Wvd = interaction_matrix1';
+
+                [dn, dr] = size(Wvd);
+
+                T = [Wdd, Wvd'; Wvd, Wvv];
+                [t1, t2] = size(T);
+                trIndex = double(T ~= 0);
+
+                [WW, iter] = BNNR(alpha, beta, T, trIndex, tol1, tol2, maxiter, 0, 1);
+
+                M_recovery = WW((t1 - dn + 1) : t1, 1 : dr);
+                predict_score_matrix2 = M_recovery';
+
+                %% ensemble é¢„æµ‹ï¼Œæƒé‡ä¸º ensemble_weight
+                predict_score_matrix3_3 = ensemble_average( ...
+                    predict_score_matrix1, ...
+                    predict_score_matrix2, ...
+                    interaction_matrix1_index, ...
+                    ensemble_weight);
+
+                %% è®¡ç®— ensemble æ’å
+                five3 = conputing_ensemble_ranking( ...
+                    predict_score_matrix3_3, ...
+                    interaction_matrix, ...
+                    181, ...
+                    A, ...
+                    new_array);
+
+                C1_ensemble3 = [C1_ensemble3, five3];
+
             end
-            
-            
-            %         %µÚÈıÖÖ·½·¨£ºensemble
-            %         Sco3= predict_score_matrix3(n);
-            %         final_score=Sco3( interaction_matrix==0);
-            %         for i=1:185
-            %           q=A(new_array(1,i),1);
-            %           w=A(new_array(1,i),2);
-            %           s_score=Sco3(q,w);
-            %           T=[s_score;final_score];                                                %sort the score
-            %           index3=sort(T,'descend');
-            %           index3_1=find(index3==s_score);                                          %find the sort of changed variate
-            %           if length(index3_1)~=1
-            %             index3_2=mean(index3_1);                                              %decide the number of the same value
-            %           else
-            %             index3_2=index3_1;                                                    %get the average rank between same value
-            %           end
-            %           five_g3_1(i)=index3_2;
-            %         end
-            
-            
-            five1 = conputing_ensemble_ranking( predict_score_matrix3_1,interaction_matrix,181,A,new_array); %conputing_ensemble_ranking ¼ÆËã¼¯³ÉËã·¨µÄÅÅÃû
-            five2 = conputing_ensemble_ranking( predict_score_matrix3_2,interaction_matrix,181,A,new_array);
-            five3 = conputing_ensemble_ranking( predict_score_matrix3_3,interaction_matrix,181,A,new_array);
-            five4 = conputing_ensemble_ranking( predict_score_matrix3_4,interaction_matrix,181,A,new_array);
-            five5 = conputing_ensemble_ranking( predict_score_matrix3_5,interaction_matrix,181,A,new_array);
-            five6 = conputing_ensemble_ranking( predict_score_matrix3_6,interaction_matrix,181,A,new_array);
-            five7 = conputing_ensemble_ranking( predict_score_matrix3_7,interaction_matrix,181,A,new_array);
-            five8 = conputing_ensemble_ranking( predict_score_matrix3_8,interaction_matrix,181,A,new_array);
-            five9 = conputing_ensemble_ranking( predict_score_matrix3_9,interaction_matrix,181,A,new_array);
-            
-            C1_BRM=[C1_BRM,five_g1_1];
-            C1_INBM=[C1_INBM,five_g2_1];
-            
-            C1_ensemble1=[C1_ensemble1,five1];
-            C1_ensemble2=[C1_ensemble2,five2];
-            C1_ensemble3=[C1_ensemble3,five3];
-            C1_ensemble4=[C1_ensemble4,five4];
-            C1_ensemble5=[C1_ensemble5,five5];
-            C1_ensemble6=[C1_ensemble6,five6];
-            C1_ensemble7=[C1_ensemble7,five7];
-            C1_ensemble8=[C1_ensemble8,five8];
-            C1_ensemble9=[C1_ensemble9,five9];
+
+            if circle == 4
+
+                nu = 181;
+                interaction_matrix1 = interaction_matrix;
+                interaction_matrix1_index = logical(zeros(row, col) ~= 0);
+
+                for i = 1:pp
+                    interaction_matrix1_index(A(i,1), A(i,2)) = 1;
+                end
+
+                new_array = array(1, 1 + circle * 181 : pp);
+
+                for j = 1:181
+                    o = A(new_array(1,j), 1);
+                    l = A(new_array(1,j), 2);
+                    interaction_matrix1(o,l) = 0;
+                    interaction_matrix1_index(o,l) = 0;
+                end
+
+                protein_gauss = similarity_protein(interaction_matrix1);
+                disease_gauss = similarity_disease(interaction_matrix1);
+
+                [protein_integration_similarity, disease_integration_similarity] = ...
+                    integration_protein_disease_similarity(protein_gauss, disease_gauss);
+
+                %% MDHGIMDA é¢„æµ‹å¾—åˆ†
+                predict_score_matrix1 = MDHGIMDA(interaction_matrix1);
+
+                %% BNNR é¢„æµ‹å¾—åˆ†
+                Wdd = protein_integration_similarity;
+                Wvv = disease_integration_similarity;
+                Wvd = interaction_matrix1';
+
+                [dn, dr] = size(Wvd);
+
+                T = [Wdd, Wvd'; Wvd, Wvv];
+                [t1, t2] = size(T);
+                trIndex = double(T ~= 0);
+
+                [WW, iter] = BNNR(alpha, beta, T, trIndex, tol1, tol2, maxiter, 0, 1);
+
+                M_recovery = WW((t1 - dn + 1) : t1, 1 : dr);
+                predict_score_matrix2 = M_recovery';
+
+                %% ensemble é¢„æµ‹ï¼Œæƒé‡ä¸º ensemble_weight
+                predict_score_matrix3_3 = ensemble_average( ...
+                    predict_score_matrix1, ...
+                    predict_score_matrix2, ...
+                    interaction_matrix1_index, ...
+                    ensemble_weight);
+
+                %% è®¡ç®— ensemble æ’å
+                five3 = conputing_ensemble_ranking( ...
+                    predict_score_matrix3_3, ...
+                    interaction_matrix, ...
+                    181, ...
+                    A, ...
+                    new_array);
+
+                C1_ensemble3 = [C1_ensemble3, five3];
+
+            end
+
         end
+
+        five_k_ensemble3(k,:) = C1_ensemble3;
+        C1_ensemble3 = [];
+
     end
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    five_k_RBM(k,:)=C1_BRM;
-    five_k_INBM(k,:)=C1_INBM;
-    C1_BRM=[];
-    C1_INBM=[];
-    five_k_ensemble1(k,:)=C1_ensemble1;
-    five_k_ensemble2(k,:)=C1_ensemble2;
-    five_k_ensemble3(k,:)=C1_ensemble3;
-    five_k_ensemble4(k,:)=C1_ensemble4;
-    five_k_ensemble5(k,:)=C1_ensemble5;
-    five_k_ensemble6(k,:)=C1_ensemble6;
-    five_k_ensemble7(k,:)=C1_ensemble7;
-    five_k_ensemble8(k,:)=C1_ensemble8;
-    five_k_ensemble9(k,:)=C1_ensemble9;
-    C1_ensemble1=[];
-    C1_ensemble2=[];
-    C1_ensemble3=[];
-    C1_ensemble4=[];
-    C1_ensemble5=[];
-    C1_ensemble6=[];
-    C1_ensemble7=[];
-    C1_ensemble8=[];
-    C1_ensemble9=[];
-    
-    
-    % five_k_ensemble_1=C2(1,:);
-    % five_k_ensemble_2=C2(2,:);
-    % five_k_ensemble_3=C2(3,:);
-    % five_k_ensemble_4=C2(4,:);
-    % five_k_ensemble_5=C2(5,:);
-    % five_k_ensemble_6=C2(6,:);
-    % five_k_ensemble_7=C2(7,:);
-    % five_k_ensemble_8=C2(8,:);
-    % five_k_ensemble_9=C2(9,:);
-    
-    %     for n=1:9
-    %     C2(i,:)=[];
-    %     end
-    %
-    
+
+    %% ä¿å­˜å½“å‰æƒé‡çš„äº”æŠ˜æ’åç»“æœ
+    five_fold_file = fullfile(result_dir, ...
+        ['five_fold_ensemble_', weight_tag, '.xlsx']);
+
+    xlswrite(five_fold_file, five_k_ensemble3);
+
+    fprintf('å½“å‰æƒé‡ %.1f çš„äº”æŠ˜ç»“æœå·²ä¿å­˜åˆ°ï¼š\n%s\n', ...
+        ensemble_weight, five_fold_file);
+
+    %% è®¡ç®—å½“å‰æƒé‡çš„ AUC
+    interaction = xlsread(fullfile(result_dir, 'Protein_Disease_Associations.xlsx'));
+    [n, m] = size(interaction);
+
+    position_matrix = xlsread(five_fold_file);
+    [round_num, ~] = size(position_matrix);
+
+    auc_each_round = nan(round_num, 1);
+
+    for k = 1:round_num
+
+        position = position_matrix(k, :);
+
+        if all(position == 0)
+            continue;
+        end
+
+        auc_each_round(k) = calc_auc_from_position(position, n, m, pp);
+
+    end
+
+    mean_auc = mean(auc_each_round, 'omitnan');
+    mean_auc_all(weight_id) = mean_auc;
+
+    fprintf('w = %.1f, mean AUC = %.6f\n', ensemble_weight, mean_auc);
+
+    %% ä¿å­˜å½“å‰æƒé‡æ¯ä¸€è½®çš„ AUC
+    auc_output_file = fullfile(result_dir, ...
+        [model_name, '_auc_each_round.xlsx']);
+
+    xlswrite(auc_output_file, auc_each_round);
+
+    fprintf('å½“å‰æƒé‡ %.1f çš„æ¯è½® AUC å·²ä¿å­˜åˆ°ï¼š\n%s\n', ...
+        ensemble_weight, auc_output_file);
+
 end
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_MDHGI.xlsx',five_k_RBM);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_BNNR.xlsx',five_k_INBM);
 
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble1.xlsx',five_k_ensemble1);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble2.xlsx',five_k_ensemble2);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble3.xlsx',five_k_ensemble3);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble4.xlsx',five_k_ensemble4);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble5.xlsx',five_k_ensemble5);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble6.xlsx',five_k_ensemble6);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble7.xlsx',five_k_ensemble7);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble8.xlsx',five_k_ensemble8);
-xlswrite('E:\L_B\code for MDHGI and BNNR\749-277\five_fold\result_58-100\five_fold_ensemble9.xlsx',five_k_ensemble9);
+%% æ±‡æ€»ä¿å­˜æ‰€æœ‰æƒé‡çš„ mean AUC
+summary_table = table(ensemble_weights', model_names, mean_auc_all, ...
+    'VariableNames', {'Weight', 'Model', 'Mean_AUC'});
 
+summary_file = fullfile(result_dir, 'mean_auc_summary_all_weights.xlsx');
+writetable(summary_table, summary_file);
+
+fprintf('\næ‰€æœ‰æƒé‡è¿è¡Œå®Œæˆï¼ŒAUC æ±‡æ€»ç»“æœå·²ä¿å­˜åˆ°ï¼š\n%s\n', summary_file);
 
 toc;
-fprintf('five_fold½áÊø\n');
+fprintf('å…¨éƒ¨å®éªŒç»“æŸã€‚\n');
 
 
+%% ====== æœ¬åœ°å‡½æ•°ï¼šæ ¹æ®ä¸€è½®æ’åè®¡ç®— AUC ======
+function overallauc = calc_auc_from_position(position, n, m, pp)
+
+    position = position(:)';
+
+    fold_size = floor(pp / 5);
+
+    max_k = m * n - fold_size * 4;
+
+    denominator = fold_size * 4 * ...
+        (m * n - pp + fold_size - 1) + ...
+        (pp - fold_size * 4) * ...
+        (m * n - fold_size * 4 - 1);
+
+    tpr = zeros(max_k, 1);
+    fpr = zeros(max_k, 1);
+
+    for kk = 1:max_k
+
+        tp = sum(position <= kk);
+
+        tpr(kk) = tp / pp;
+
+        fp = kk * pp - tp;
+
+        fpr(kk) = fp / denominator;
+
+    end
+
+    overallauc = trapz(fpr, tpr);
+
+end

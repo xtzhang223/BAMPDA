@@ -1,97 +1,105 @@
-# BAMPDA: A matrix refactoring and heterogeneous inference framework for predicting PTM-disease associations.
+# BAMPDA: A Matrix Refactoring and Heterogeneous Inference Framework for Predicting PTM-Disease Associations
 
-BAMPDA: A matrix refactoring and heterogeneous inference framework for predicting PTM-disease associations.
-Prepared by Necla Nisa Soylu and Emre Sefer
- 
+BAMPDA is a matrix refactoring and heterogeneous inference framework for predicting potential post-translational modification (PTM)-disease associations.
 
-## 📖 Overview
-Predicting PTM-disease associations is crucial for understanding pathogenic mechanisms. BAMPDA integrates **Bounded Nuclear Norm Regularization (BNNR)** and **Matrix Decomposition and Heterogeneous Graph Inference (MDHGI)** into a unified computational pipeline. By combining disease semantic similarities, protein sequence similarities, and Gaussian interaction profile similarities, BAMPDA effectively captures the complex latent topological structures to infer potential PTM-disease pairs.
+## Overview
 
----
+ BAMPDA integrates **Bounded Nuclear Norm Regularization (BNNR)** and **Matrix Decomposition and Heterogeneous Graph Inference (MDHGI)** into a unified computational framework.
+
+By combining disease semantic similarity, protein sequence similarity, and Gaussian interaction profile similarity, BAMPDA captures latent topological structures in heterogeneous biological networks and infers potential PTM-disease associations.
+
+## Datasets
 
 ### Dataset 1
-* **Source:** [PhosphoSitePlus®](https://www.phosphosite.org/)
-* **Scale:** 1,751 known PTM-disease associations.
-* **Entities:** 1,036 proteins and 391 diseases.
+
+- **Source:** [PhosphoSitePlus]
+- **Scale:** 1,751 known PTM-disease associations
+- **Entities:** 1,036 proteins and 391 diseases
 
 ### Dataset 2
-* **Source:** [PTMD v1.0](http://ptmd.biocuckoo.org/)
-* **Preprocessing:** We strictly filtered the original PTMD database to exclude any protein-disease associations that did not involve specific PTM sites, ensuring a highly confident benchmark.
-* **Scale:** 905 refined PTM-disease associations.
-* **Entities:** 749 proteins and 275 diseases.
 
----
+- **Source:** [PTMD v1.0]
+- **Preprocessing:** Protein-disease associations without specific PTM-site information were removed to construct a high-confidence benchmark dataset.
+- **Scale:** 905 refined PTM-disease associations
+- **Entities:** 749 proteins and 275 diseases
 
-## 🧮 Data Formulation (Adjacency Matrix)
+## Data Formulation
 
-Although our datasets inherently contain specific PTM classifications, **BAMPDA formulates the prediction task purely as a binary matrix refactoring problem**. Crucially, the specific types of PTMs are *not* provided as explicit input labels to the model during training.
+Although the original datasets contain PTM-related information, BAMPDA formulates the prediction task as a binary association matrix completion problem. Known protein-disease associations are represented by an adjacency matrix \(A\), where rows correspond to proteins and columns correspond to diseases.
 
-All known protein-disease associations from the datasets are computationally structured into an adjacency matrix $A$ (size $np \times nd$, where $np$ is the number of proteins and $nd$ is the number of diseases):
-
-$$
-A(i, j) = 
-\begin{cases} 
-1, & \text{if protein } p_{i} \text{ is associated with disease } d_{j} \\ 
-0, & \text{otherwise} 
+\[
+A(i,j)=
+\begin{cases}
+1, & \text{if protein } p_i \text{ is associated with disease } d_j \\
+0, & \text{otherwise}
 \end{cases}
-$$
+\]
 
-*Note: This purely binary formulation ensures that the diverse PTM states recovered in our subsequent case studies are genuine computational discoveries of latent biological mechanisms, rather than mere memorization of initial dataset labels.*
+This binary formulation allows BAMPDA to infer potential PTM-disease associations based on latent topological and similarity information rather than directly relying on PTM-type labels.
 
-Each dataset folder (`Dataset1` and `Dataset2`) contains the following preprocessed components in Excel format:
+Each dataset folder contains the following files:
 
-**1. Biological Features:**
-- `Disease_Name.xlsx`: The list of targeted diseases.
-- `Protein_Numbers.xlsx`: The list of PTM-related proteins.
-- `Disease_Semantic_Similarity_Matrix.xlsx`: Calculated based on the MeSH descriptors of diseases.
-- `Protein_Sequence_Similarity_Matrix.xlsx`: Calculated using standard sequence alignment tools.
+### Biological features
 
-**2. Gaussian Interaction Profile (GIP) Similarities:**
+- `Disease_Name.xlsx`: Disease name information
+- `Protein_Numbers.xlsx`: Protein index information
+- `Disease_Semantic_Similarity_Matrix.xlsx`: Disease semantic similarity matrix
+- `Protein_Sequence_Similarity_Matrix.xlsx`: Protein sequence similarity matrix
+
+### Gaussian interaction profile similarities
+
 - `Disease_Gaussian_Similarity_Matrix.xlsx`
 - `Protein_Gaussian_Similarity_Matrix.xlsx`
 
-**3. Association Matrices:**
-- `Protein_Disease_adj.xlsx`: The adjacency matrix representing the topological network.
-- `Protein_Disease_Associations.xlsx`: Ground-truth known PTM-disease associations used for training/validation.
+### Association matrices
 
----
+- `Protein_Disease_adj.xlsx`: Known protein-disease association pairs
+- `Protein_Disease_adj_name.xlsx`: Known protein-disease association 
+- `Protein_Disease_Associations.xlsx`: Binary protein-disease association matrix
 
-## ⚙️ Model Architecture & Code Structure
-*(借鉴点：将代码文件与处理步骤对应起来)*
-The framework is highly modularized. You can find the data processing codes and the core algorithms in the following files:
 
-* **Step 1: Feature Weighting**
-  - `protein_disease_weight_matrix.m`: Processes the `Disease_Semantic_Similarity_Matrix` and `Protein_Sequence_Similarity_Matrix` to generate the initial weight matrix.
-* **Step 2: Similarity Integration**
-  - `integration_protein_disease_similarity.m`: Incorporates the Gaussian similarities (`Disease_Gaussian_Similarity_Matrix.xlsx` and `Protein_Gaussian_Similarity_Matrix.xlsx`) to compute the final, integrated `Disease_Similarity` and `Protein_Similarity` matrices.
-* **Step 3: Core Prediction (BAMPDA Integration)**
-  - `BNNR.m`: Executes the Bounded Nuclear Norm Regularization algorithm.
-  - `MDHGI.m`: Executes the Matrix Decomposition and Heterogeneous Graph Inference algorithm.
-  - `main.m`: The primary orchestration script. It loads the datasets, calls the preprocessing modules, executes the BAMPDA core, and outputs the final prediction scores and performance metrics (e.g., AUC).
 
----
+### Core MATLAB files
 
-## 🚀 Step-by-Step Illustrated Protocol (Quick Start)
-*(针对审稿人意见的核心回应：图文教程)*
+- `main.m`: Main script for running BAMPDA
+- `pre_recall.m`: Calculates Precision, Recall, and F1-score based on the predicted association matrix and the ground-truth association matrix.
+- `BNNR.m`: Implementation of Bounded Nuclear Norm Regularization
+- `MDHGIMDA.m`: Implementation of matrix decomposition and heterogeneous graph inference
+- `ensemble_average.m`: Ensemble integration of prediction scores
+- `computing_ensemble_ranking.m`: Ranking calculation for cross-validation evaluation
+- `integration_protein_disease_similarity.m`: Integration of protein and disease similarity matrices
+- `similarity_protein.m`: Calculation of protein Gaussian similarity
+- `similarity_disease.m`: Calculation of disease Gaussian similarity
 
-### 1. Requirements
-- **Environment:** MATLAB R2023b or later.
+### Supporting MATLAB files
 
-### 2. Loading the Data
-Clone this repository and add the folder to your MATLAB path. Open `main.m`. By default, the script is configured to load `Dataset1`. 
+- `logistic.m`
+- `lrr.m`
+- `softmax_sample.m`
+- `solve_l12.m`
+- `solve_l2.m`
+- `svt.m`
+- `t_2.m`
+- `test2_generate_array.m`
+- `pre_recall.m`
 
-*(Note for authors: Paste a screenshot here showing the MATLAB workspace after loading the Excel files)*
 
-### 3. Running the Framework
-Simply click the **"Run"** button in MATLAB or type `main` in the Command Window. The script will automatically trigger the integration modules and start the matrix refactoring process.
 
-*(Note for authors: Paste a screenshot here showing the command window printing out the progress or parameters)*
+### PTM-stratified robustness analysis
 
-### 4. Interpreting the Results
-Upon completion, the script will output the predicted association score matrix. Higher scores represent a higher probability of association between the corresponding PTM and disease. 
+The following Python scripts are used for the PTM-stratified robustness analysis described in the manuscript. Specifically, they split the benchmark associations according to five representative PTM categories and support the evaluation of BAMPDA under uneven PTM coverage.
 
-*(Note for authors: Paste a screenshot here showing the final ROC curve figure or the output variable containing the results)*
+- `split_Phosphorylation.py`: Extracts phosphorylation-related associations
+- `split_Ubiquitination.py`: Extracts ubiquitination-related associations
+- `split_Methylation.py`: Extracts methylation-related associations
+- `split_Acetylation.py`: Extracts acetylation-related associations
+- `split_Glycosylation.py`: Extracts glycosylation-related associations
 
----
-## ✉️ Contact
-For any questions regarding the code or datasets, please refer to the manuscript or open an issue in this repository.
+These scripts were used for the stratified evaluation reported in the robustness experiment, where BAMPDA was evaluated separately on each PTM category using AUC, Recall, Precision, and F1-score.
+## Requirements
+
+The code requires the following environment:
+
+- MATLAB R2023b or later
+- Python 3.9
+
